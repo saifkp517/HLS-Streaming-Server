@@ -1,6 +1,7 @@
 import express from "express";
 import session from "express-session"
 import jwt from "jsonwebtoken"
+import crypto from "crypto"
 import GoogleStrategy from "passport-google-oauth"
 import mongoose from "mongoose";
 import cors from "cors";
@@ -154,6 +155,24 @@ app.post('/location', async (req, res) => {
     console.log(err)
   }
 })
+
+//////////////////////////////UPLOAD IMAGES//////////////////////////////
+
+import multer from "multer"
+import {GridFsStorage} from "multer-gridfs-storage"
+
+const connect = mongoose.createConnection(url)
+
+let gfs;
+
+connect.once('open', () => {
+  gfs = new mongoose.mongo.GridFSBucket(connect.db, {
+    bucketName: "uploads"
+  })
+})
+
+
+
 
 
 ////////////////////////////HAVERSINE FORMULA//////////////////////////
