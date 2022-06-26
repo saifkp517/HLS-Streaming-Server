@@ -1,11 +1,11 @@
 import express from "express";
 import session from "express-session"
-import jwt from "jsonwebtoken"
-import crypto from "crypto"
 import GoogleStrategy from "passport-google-oauth"
-import mongoose from "mongoose";
 import cors from "cors";
 import bodyParser from "body-parser"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -20,7 +20,7 @@ app.use(session({
   }
 }));
 
-app.use(bodyParser.urlencoded({extended: false}))
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(express.json());
 
 app.use(cors({
@@ -28,11 +28,8 @@ app.use(cors({
   credentials: true
 }))
 
-const User = require("./models")
 
-const url: string = "mongodb+srv://turd_waffle:saif5017@cluster0.bxt7i.mongodb.net/?retryWrites=true&w=majority";
-mongoose.connect(url).then(() => console.log("connected to database"))
-  .catch(err => console.log(err))
+//const mongoURI: string = "mongodb+srv://turd_waffle:saif5017@cluster0.bxt7i.mongodb.net/?retryWrites=true&w=majority";
 
 app.get('/', function (req, res) {
   res.render('pages/auth');
@@ -100,29 +97,33 @@ app.get('/auth/google/callback',
       // Get user input
       const displayName = userProfile.displayName;
       const email = userProfile.emails[0].value
-      const _id = userProfile.id
+      const id = userProfile.id
 
       // check if user already exist
       // Validate if user exist in our database
-      const oldUser = await User.findOne({ _id })
+      const oldUser = await prisma.oauthuser.findUnique({
+        where: {
+          user_id: id
+        }
+      })
 
       if (oldUser) {
         console.log("old user")
         return res.redirect('http://localhost:3001/DashBoard')
       }
 
-      // Create user in our database
-      const user = await new User({
-        _id: _id,
-        displayName: displayName,
-        email: email,
-        coordinates: {
+      const user = await prisma.oauthuser.create({
+        data: {
+          user_id: id,
+          name: displayName,
+          email: email,
           latitude: 0,
           longitude: 0
         }
-      });
-      const save = user.save()
-      if (save) { console.log("added") }
+      })
+
+      if (user) {console.log("added")}
+      // Create user in our database
 
       // return new user
       res.redirect('http://localhost:3001/DashBoard');
@@ -132,63 +133,8 @@ app.get('/auth/google/callback',
   });
 
 
-
-/////////////////////////UPDATE LOCATION////////////////////////////////////////////
-
-app.post('/location', async (req, res) => {
-  try {
-
-    let {latitude, longitude} = req.body;
-    let displayName: string = req.body;
-    console.log(longitude, latitude, displayName)
-
-     User.findOneAndUpdate(displayName, {
-      coordinates: {
-        latitude: latitude,
-        longitude: longitude
-      }
-    }).then((result: any) => console.log(result))
-    .catch((err: any) => console.log("error: " + err))
-
-  } catch (err) {
-    res.json(err)
-    console.log(err)
-  }
-})
-
-//////////////////////////////UPLOAD IMAGES//////////////////////////////
-
-import multer from "multer"
-import {GridFsStorage} from "multer-gridfs-storage"
-
-const connect = mongoose.createConnection(url)
-
-let gfs;
-
-connect.once('open', () => {
-  gfs = new mongoose.mongo.GridFSBucket(connect.db, {
-    bucketName: "uploads"
-  })
-})
+//////////////////////////////STREAMING//////////////////////////////
 
 
 
 
-
-////////////////////////////HAVERSINE FORMULA//////////////////////////
-
-//using haversine formula to calculate the distance between 2 lattitudes
-
-function distanceBetweenGeoPoints(lat1: number, lat2: number, lon1: number, lon2: number) {
-  const EarthRadius = 6371 //km;
-  let DeltaLattitude: number = lat2 - lat1;
-  let DeltaLongitude: number = lon2 - lon1;
-
-  let haversine = (Math.sin(DeltaLattitude / 2) ** 2) + Math.cos(lat1) * Math.cos(lat2) * (Math.sin(DeltaLongitude) ** 2)
-  //atan2 returns the angle in radians
-  let centralAngle = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
-
-  let distance = EarthRadius * centralAngle;
-  console.log(distance)
-
-}
