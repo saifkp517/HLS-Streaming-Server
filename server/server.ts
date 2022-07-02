@@ -133,7 +133,18 @@ app.get('/auth/google/callback',
   });
 
 
-//////////////////////////////STREAMING//////////////////////////////
+//////////////////////////////STREAMKEY AUTH//////////////////////////////
+
+app.post("/auth", (req, res) => {
+  const streamKey = req.body.key;
+
+  if (streamKey == "key123") {
+    res.status(200).send();
+    return;
+  }
+
+  res.status(400).send();
+})
 
 
 
