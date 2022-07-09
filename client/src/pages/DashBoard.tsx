@@ -1,5 +1,7 @@
 import React, { useState } from "react"
+import { Outlet } from "react-router-dom"
 import ReactHlsPlayer from 'react-hls-player'
+import Sidebar from "./components/Sidebar"
 
 function DashBoard() {
 
@@ -21,7 +23,10 @@ function DashBoard() {
         ? `hi there: ${username}` : 'not logged in!';
 
     return (
-        <div className="App">
+        <div className="App" style={{
+        padding: '50px 0px 0px 370px'}}>
+            <Sidebar />
+            <Outlet />
             <h1>Dashboard</h1>
             <p>{message}</p>
             <ReactHlsPlayer

@@ -35,7 +35,7 @@ app.get('/', function (req, res) {
   res.render('pages/auth');
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 4000;
 app.listen(port, () => console.log('App listening on port ' + port));
 
 
@@ -76,7 +76,7 @@ const GOOGLE_CLIENT_SECRET = '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';
 passport.use(new googlestrat({
   clientID: GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:3000/auth/google/callback"
+  callbackURL: "http://localhost:4000/auth/google/callback"
 },
   function (accessToken, refreshToken, profile, done) {
     userProfile = profile;
@@ -109,7 +109,7 @@ app.get('/auth/google/callback',
 
       if (oldUser) {
         console.log("old user")
-        return res.redirect('http://localhost:3001/DashBoard')
+        return res.redirect('http://localhost:3000/DashBoard')
       }
 
       const user = await prisma.oauthuser.create({
@@ -126,7 +126,7 @@ app.get('/auth/google/callback',
       // Create user in our database
 
       // return new user
-      res.redirect('http://localhost:3001/DashBoard');
+      res.redirect('http://localhost:3000/DashBoard');
     } catch (err) {
       console.log(err);
     }
