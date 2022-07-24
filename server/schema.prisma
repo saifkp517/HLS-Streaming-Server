@@ -11,6 +11,6 @@ model oauthuser {
     user_id       String    @id
     name    String
     email String
-    latitude Int
-    longitude Int
+    live Boolean
+    userKey String
 }

@@ -4,6 +4,7 @@ import GoogleStrategy from "passport-google-oauth"
 import cors from "cors";
 import bodyParser from "body-parser"
 import { PrismaClient } from "@prisma/client"
+import bcrypt from "bcrypt"
 
 const prisma = new PrismaClient();
 
@@ -11,8 +12,8 @@ const app = express();
 
 app.use(session({
   resave: false,
-  saveUninitialized: true,
-  secret: 'SECRET',
+  saveUninitialized: false,
+  secret: 'mYsecretisalwaysbetterthanyoursbitch!.',
   rolling: true,
   cookie: {
     maxAge: 360000,
@@ -24,12 +25,18 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(express.json());
 
 app.use(cors({
-  origin: true,
+  origin: 'http://localhost:3000',
   credentials: true
 }))
 
+app.get("/", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*")
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Max-Age", "1800");
+  res.setHeader("Access-Control-Allow-Headers", "content-type");
+  res.setHeader("Access-Control-Allow-Methods", "PUT, POST, GET, DELETE, PATCH, OPTIONS");
+});
 
-//const mongoURI: string = "mongodb+srv://turd_waffle:saif5017@cluster0.bxt7i.mongodb.net/?retryWrites=true&w=majority";
 
 app.get('/', function (req, res) {
   res.render('pages/auth');
@@ -48,15 +55,9 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get('/success', async (req, res) => {
-
-  if (req.isAuthenticated()) {
-    console.log(userProfile)
-    res.json(userProfile)
-  } else {
-    res.send("please login")
-  }
-
+  res.json(userProfile)
 });
+
 app.get('/error', (req, res) => res.send("error logging in"));
 
 passport.serializeUser(function (user, cb) {
@@ -112,17 +113,21 @@ app.get('/auth/google/callback',
         return res.redirect('http://localhost:3000/DashBoard')
       }
 
+      let hashedKey: string = await bcrypt.hash(id, 10)
+
+      console.log("UserKey: " + hashedKey)
+
       const user = await prisma.oauthuser.create({
         data: {
           user_id: id,
           name: displayName,
           email: email,
-          latitude: 0,
-          longitude: 0
+          live: false,
+          userKey: hashedKey
         }
       })
 
-      if (user) {console.log("added")}
+      if (user) { console.log("added") }
       // Create user in our database
 
       // return new user
@@ -132,20 +137,93 @@ app.get('/auth/google/callback',
     }
   });
 
+app.get('/key', async (req, res) => {
 
-//////////////////////////////STREAMKEY AUTH//////////////////////////////
+  const id = userProfile.id
 
-app.post("/auth", (req, res) => {
-  const streamKey = req.body.key;
+  let hashedKey: string = await bcrypt.hash(id, 10)
 
-  if (streamKey == "key123") {
-    res.status(200).send();
-    return;
+  if (req.isAuthenticated()) {
+    const user = await prisma.oauthuser.update({
+      where: {
+        user_id: id
+      },
+      data: {
+        userKey: hashedKey
+      },
+    })
+
+    res.json(hashedKey)
+
+    console.log(user)
+
+  } else {
+    res.json("please login")
   }
 
-  res.status(400).send();
+});
+
+app.get('/getstuff', async (req, res) => {
+  const liveUsers = await prisma.oauthuser.findMany()
+
+  res.json(liveUsers)
 })
 
 
+//////////////////////////////STREAMKEY AUTH//////////////////////////////
+
+app.post("/auth", async (req, res) => {
+  const streamKey = req.body.key;
+
+  const user = await prisma.oauthuser.findFirst({
+    where: {
+      userKey: streamKey
+    },
+    select: {
+      user_id: true
+    }
+  })
+
+  if (user) {
+    
+    let string = JSON.stringify(user)
+    let parse = JSON.parse(string)
+
+    const livestatus = await prisma.oauthuser.update({
+      where: {
+        user_id: parse.user_id
+      },
+      data: {
+        live: true
+      },
+    })
+
+    console.log(livestatus)
 
 
+    console.log("horray!")
+    res.status(200).send();
+    return;
+
+  }
+
+  res.status(403).send()
+
+})
+
+app.get("/notify", (req, res) => {
+  console.log("notofied")
+})
+
+app.get("/done", (req, res) => {
+  return console.log("we're done boys, wrap it up!")
+})
+
+
+app.get("/connection", (req, res) => {
+  console.log("connected")
+})
+
+app.get("/play", (req, res) => {
+  console.log("play")
+})
